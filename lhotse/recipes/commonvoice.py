@@ -9,6 +9,8 @@ This project is an effort to bridge the digital speech divide. Voice recognition
 How does it work?
 We are crowdsourcing an open-source dataset of voices. Donate your voice, validate the accuracy of other people's clips, make the dataset better for everyone.
 """
+import io
+import os
 import csv
 import logging
 import math
@@ -39,6 +41,10 @@ from lhotse.utils import Pathlike, is_module_available, resumable_download, safe
 DEFAULT_COMMONVOICE_URL = (
     "https://mozilla-common-voice-datasets.s3.dualstack.us-west-2.amazonaws.com"
 )
+
+from lhotse.src import LoadFileByFS
+
+fs = LoadFileByFS()
 
 
 COMMONVOICE_LANGS = "en de fr cy tt kab ca zh-TW it fa eu es ru tr nl eo zh-CN rw pt zh-HK cs pl uk".split()
@@ -145,19 +151,42 @@ def _read_cv_manifests_if_cached(
     return manifests
 
 
-def _parse_utterance(
-    lang_path: Path,
+def _parse_utterance(fs, 
+    lang_path: str,
     language: str,
     audio_info: str,
 ) -> Optional[Tuple[Recording, SupervisionSegment]]:
-    audio_path = lang_path / "clips" / audio_info["path"]
+    audio_path = lang_path + '/' + "clips" + '/' + str(audio_info["path"])
 
-    if not audio_path.is_file():
-        logging.info(f"No such file: {audio_path}")
-        return None
+    # if not audio_path.is_file():
+    #     logging.info(f"No such file: {audio_path}")
+    #     return None
 
     recording_id = Path(audio_info["path"]).stem
-    recording = Recording.from_file(path=audio_path, recording_id=recording_id)
+
+    a = 1
+
+    # data = fs.load_fs_fullname(audio_path)
+
+    recording = Recording.from_file(path=audio_path, recording_id=recording_id, fs=fs)
+    # recording = Recording.from_bytes(data=data, recording_id=recording_id)
+
+    custom = {
+            "age": audio_info["age"],
+            "accents": audio_info["accents"]
+    }
+    if 'variant' in audio_info.keys():
+        custom["variant"] = audio_info["variant"]
+    if 'locale' in audio_info.keys():
+        custom["locale"] = audio_info["locale"]
+    if 'segment' in audio_info.keys():
+        custom["segment"] = audio_info["segment"]
+    if 'accents' in audio_info.keys():
+        custom["accents"] = audio_info["accents"]
+    if 'up_votes' in audio_info.keys():
+        custom["up_votes"] = audio_info["up_votes"]
+    if 'down_votes' in audio_info.keys():
+        custom["down_votes"] = audio_info["down_votes"]
 
     segment = SupervisionSegment(
         id=recording_id,
@@ -169,19 +198,15 @@ def _parse_utterance(
         speaker=audio_info["client_id"],
         text=audio_info["sentence"].strip(),
         gender=audio_info["gender"],
-        custom={
-            "age": audio_info["age"],
-            "accents": audio_info["accents"],
-            "variant": audio_info["variant"],
-        },
+        custom=custom,
     )
     return recording, segment
 
 
-def _prepare_part(
+def _prepare_part(fs, 
     lang: str,
     part: str,
-    lang_path: Pathlike,
+    lang_path: str,
     num_jobs: int = 1,
 ) -> Tuple[RecordingSet, SupervisionSet]:
     """
@@ -196,42 +221,46 @@ def _prepare_part(
         note that CommonVoice manifests may be fairly large in memory.
     """
 
-    lang_path = Path(lang_path)
-    tsv_path = lang_path / f"{part}.tsv"
+    # lang_path = Path(lang_path)
+    tsv_path = os.path.join(lang_path,f"{part}.tsv")
 
     with disable_ffmpeg_torchaudio_info():
-        with ProcessPoolExecutor(
-            max_workers=num_jobs,
-            mp_context=mp_get_context("spawn"),
-        ) as ex:
+        # with ProcessPoolExecutor(
+        #     max_workers=num_jobs,
+        #     mp_context=mp_get_context("spawn"),
+        # ) as ex:
 
-            futures = []
-            recordings = []
-            supervisions = []
-            audio_infos = []
+        futures = []
+        recordings = []
+        supervisions = []
+        audio_infos = []
 
-            with open(tsv_path, "r") as f:
+        data = fs.load_fs_fullname(tsv_path).decode('utf-8')
 
-                # Note: using QUOTE_NONE as CV dataset contains unbalanced quotes, cleanup needed later
-                audio_infos = csv.DictReader(f, delimiter="\t", quoting=csv.QUOTE_NONE)
+        with io.StringIO(data) as f:
 
-                for audio_info in tqdm(audio_infos, desc="Distributing tasks"):
-                    futures.append(
-                        ex.submit(
-                            _parse_utterance,
-                            lang_path,
-                            lang,
-                            audio_info,
-                        )
-                    )
+            # Note: using QUOTE_NONE as CV dataset contains unbalanced quotes, cleanup needed later
+            audio_infos = csv.DictReader(f, delimiter="\t", quoting=csv.QUOTE_NONE)
 
-            for future in tqdm(futures, desc="Processing"):
-                result = future.result()
-                if result is None:
-                    continue
-                recording, segment = result
-                recordings.append(recording)
-                supervisions.append(segment)
+            for audio_info in tqdm(audio_infos, desc="Distributing tasks"):
+                futures.append(_parse_utterance(fs, lang_path, lang, audio_info))
+                # futures.append(
+                #     ex.submit(
+                #         _parse_utterance,
+                #         fs,
+                #         lang_path,
+                #         lang,
+                #         audio_info,
+                #     )
+                # )
+
+        for result in tqdm(futures, desc="Processing"):
+            # result = future.result()
+            if result is None:
+                continue
+            recording, segment = result
+            recordings.append(recording)
+            supervisions.append(segment)
 
     recording_set = RecordingSet.from_recordings(recordings)
     supervision_set = SupervisionSet.from_segments(supervisions)
@@ -242,6 +271,7 @@ def _prepare_part(
 def prepare_commonvoice(
     corpus_dir: Pathlike,
     output_dir: Pathlike,
+    prefix: str, 
     languages: Union[str, Sequence[str]] = "auto",
     splits: Union[str, Sequence[str]] = COMMONVOICE_DEFAULT_SPLITS,
     num_jobs: int = 1,
@@ -270,7 +300,7 @@ def prepare_commonvoice(
     :return: a dict with manifests for all specified languagues and their train/dev/test splits.
     """
     corpus_dir = Path(corpus_dir)
-    assert corpus_dir.is_dir(), f"No such directory: {corpus_dir}"
+    # assert corpus_dir.is_dir(), f"No such directory: {corpus_dir}"
     assert output_dir is not None, (
         "CommonVoice recipe requires to specify the output "
         "manifest directory (output_dir cannot be None)."
@@ -278,22 +308,31 @@ def prepare_commonvoice(
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    if languages == "auto":
-        languages = set(COMMONVOICE_LANGS).intersection(
-            path.name for path in corpus_dir.glob("*")
-        )
-        if not languages:
-            raise ValueError(
-                f"Could not find any of CommonVoice languages in: {corpus_dir}"
-            )
-    elif isinstance(languages, str):
-        languages = [languages]
+    # if languages == "auto":
+    #     languages = set(COMMONVOICE_LANGS).intersection(
+    #         path.name for path in directory_path.glob("*")
+    #     )
+    #     if not languages:
+    #         raise ValueError(
+    #             f"Could not find any of CommonVoice languages in: {corpus_dir}"
+    #         )
+    # elif isinstance(languages, str):
+    #     languages = [languages]
 
     manifests = {}
 
+    directory_path = os.path.dirname(corpus_dir)
+    filename_basename = os.path.basename(corpus_dir)
+    directory_path = Path(directory_path)
+
+    tar_basename = 'tar://' + filename_basename
+    #data = fs.load_fs_filename(root_dir=directory_path, fullname=tar_basename)
+
+
+
     for lang in tqdm(languages, desc="Processing CommonVoice languages"):
         logging.info(f"Language: {lang}")
-        lang_path = corpus_dir / lang
+        lang_path = str(corpus_dir) + '@' + prefix + '/' + str(lang)
 
         # Maybe the manifests already exist: we can read them and save a bit of preparation time.
         # Pattern: "cv_recordings_en_train.jsonl.gz" / "cv_supervisions_en_train.jsonl.gz"
@@ -308,7 +347,10 @@ def prepare_commonvoice(
                     f"{part} split of CommonVoice-{lang} already prepared - skipping."
                 )
                 continue
-            recording_set, supervision_set = _prepare_part(
+
+            
+
+            recording_set, supervision_set = _prepare_part(fs, 
                 lang=lang,
                 part=part,
                 lang_path=lang_path,
@@ -322,9 +364,9 @@ def prepare_commonvoice(
             validate_recordings_and_supervisions(recording_set, supervision_set)
 
             supervision_set.to_file(
-                output_dir / f"cv-{lang}_supervisions_{part}.jsonl.gz"
+                output_dir / f"{prefix}-{lang}_{part}_supervisions.jsonl.gz"
             )
-            recording_set.to_file(output_dir / f"cv-{lang}_recordings_{part}.jsonl.gz")
+            recording_set.to_file(output_dir / f"{prefix}-{lang}_{part}_recordings.jsonl.gz")
 
             lang_manifests[part] = {
                 "supervisions": supervision_set,

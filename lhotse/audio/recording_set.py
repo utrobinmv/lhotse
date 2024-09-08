@@ -10,6 +10,8 @@ from typing import Callable, Dict, Iterable, List, Mapping, Optional, Union
 import numpy as np
 from tqdm.asyncio import tqdm
 
+from lhotse.src import LoadFileByFS
+
 from lhotse.audio.recording import Channels, Recording
 from lhotse.lazy import AlgorithmMixin
 from lhotse.serialization import Serializable
@@ -86,6 +88,7 @@ class RecordingSet(Serializable, AlgorithmMixin):
     """
 
     def __init__(self, recordings: Optional[Iterable[Recording]] = None) -> None:
+        self.fs = LoadFileByFS()
         self.recordings = ifnone(recordings, {})
 
     def __eq__(self, other: "RecordingSet") -> bool:

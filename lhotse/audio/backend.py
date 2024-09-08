@@ -1,4 +1,5 @@
 import logging
+import io
 import os
 import re
 import sys
@@ -704,8 +705,14 @@ class CompositeAudioBackend(AudioBackend):
         self,
         path_or_fd: Union[Pathlike, FileObject],
         force_opus_sampling_rate: Optional[int] = None,
+        fs=None
     ):
+        # fd = fs.load_fs_fullname(path)
         backends = [b for b in self.backends if b.supports_info()]
+
+        data = fs.load_fs_fullname(path_or_fd)
+        path_or_fd = io.BytesIO(data)
+
         candidates = []
         for b in backends:
             if b.handles_special_case(path_or_fd):
@@ -1485,13 +1492,29 @@ def info(
     path: Union[Pathlike, BytesIO],
     force_opus_sampling_rate: Optional[int] = None,
     force_read_audio: bool = False,
+    fs = None
 ) -> LibsndfileCompatibleAudioInfo:
     if force_read_audio:
         assert isinstance(
             path, (str, Path)
         ), "force_read_audio=True does not work with file-like objects"
         return AudioreadBackend().info(path_or_fd=path)
-    return get_current_audio_backend().info(
+    
+    backend = get_current_audio_backend()
+
+    tar = False
+    if isinstance(path, str):
+        if path.find('@') > -1:
+            tar = True
+    
+    if tar:
+        return backend.info(
+            path_or_fd=path,
+            force_opus_sampling_rate=force_opus_sampling_rate,
+            fs=fs
+        )
+
+    return backend.info(
         path_or_fd=path,
         force_opus_sampling_rate=force_opus_sampling_rate,
     )

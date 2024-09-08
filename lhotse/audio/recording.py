@@ -175,6 +175,7 @@ class Recording:
         relative_path_depth: Optional[int] = None,
         force_opus_sampling_rate: Optional[int] = None,
         force_read_audio: bool = False,
+        fs = None
     ) -> "Recording":
         """
         Read an audio file's header and create the corresponding ``Recording``.
@@ -198,6 +199,10 @@ class Recording:
             in their headers (e.g., "The People's Speech" FLAC files).
         :return: a new ``Recording`` instance pointing to the audio file.
         """
+        tar = False
+        if path.find('@') > -1:
+            tar = True
+            path_s = path
         path = Path(path)
         recording_id = (
             path.stem
@@ -206,11 +211,19 @@ class Recording:
             if callable(recording_id)
             else recording_id
         )
-        audio_info = info(
-            path,
-            force_opus_sampling_rate=force_opus_sampling_rate,
-            force_read_audio=force_read_audio,
-        )
+        if tar:
+            audio_info = info(
+                path_s,
+                force_opus_sampling_rate=force_opus_sampling_rate,
+                force_read_audio=force_read_audio,
+                fs=fs
+            )
+        else:
+            audio_info = info(
+                path,
+                force_opus_sampling_rate=force_opus_sampling_rate,
+                force_read_audio=force_read_audio,
+            )
         if audio_info.video is not None:
             duration = audio_info.video.duration
             num_samples = compute_num_samples(duration, audio_info.samplerate)
