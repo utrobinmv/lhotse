@@ -597,11 +597,16 @@ class CompositeAudioBackend(AudioBackend):
         offset: Seconds = 0.0,
         duration: Optional[Seconds] = None,
         force_opus_sampling_rate: Optional[int] = None,
+        fs=None
     ) -> Tuple[np.ndarray, int]:
         candidates = []
         for b in self.backends:
             if b.handles_special_case(path_or_fd):
                 candidates.append(b)
+
+        if fs is not None:
+            data = fs.load_fs_fullname(path_or_fd)
+            path_or_fd = io.BytesIO(data)
 
         assert len(candidates) < 2, (
             f"CompositeAudioBackend has more than one sub-backend that "
@@ -710,8 +715,9 @@ class CompositeAudioBackend(AudioBackend):
         # fd = fs.load_fs_fullname(path)
         backends = [b for b in self.backends if b.supports_info()]
 
-        data = fs.load_fs_fullname(path_or_fd)
-        path_or_fd = io.BytesIO(data)
+        if fs is not None:
+            data = fs.load_fs_fullname(path_or_fd)
+            path_or_fd = io.BytesIO(data)
 
         candidates = []
         for b in backends:
@@ -1479,8 +1485,24 @@ def read_audio(
     offset: Seconds = 0.0,
     duration: Optional[Seconds] = None,
     force_opus_sampling_rate: Optional[int] = None,
+    fs = None
 ) -> Tuple[np.ndarray, int]:
-    return get_current_audio_backend().read_audio(
+    backend = get_current_audio_backend()
+
+    tar = False
+    if isinstance(path_or_fd, str):
+        if path_or_fd.find('@') > -1:
+            tar = True
+
+    if tar:
+        return backend.read_audio(
+            path_or_fd=path_or_fd,
+            offset=offset,
+            duration=duration,
+            force_opus_sampling_rate=force_opus_sampling_rate,
+            fs = fs
+        )
+    return backend.read_audio(
         path_or_fd=path_or_fd,
         offset=offset,
         duration=duration,

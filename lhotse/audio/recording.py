@@ -385,6 +385,7 @@ class Recording:
         channels: Optional[Channels] = None,
         offset: Seconds = 0.0,
         duration: Optional[Seconds] = None,
+        fs = None
     ) -> np.ndarray:
         """
         Read the audio samples from the underlying audio source (path, URL, unix pipe/command).
@@ -445,6 +446,7 @@ class Recording:
                 offset=offset_aug,
                 duration=duration_aug,
                 force_opus_sampling_rate=self.sampling_rate,
+                fs = fs
             )
 
             # Case: two-channel audio file but only one channel requested

@@ -69,6 +69,7 @@ class AudioSource:
         offset: Seconds = 0.0,
         duration: Optional[Seconds] = None,
         force_opus_sampling_rate: Optional[int] = None,
+        fs = None,
     ) -> np.ndarray:
         """
         Load the AudioSource (from files, commands, or URLs) with soundfile,
@@ -89,6 +90,7 @@ class AudioSource:
             offset=offset,
             duration=duration,
             force_opus_sampling_rate=force_opus_sampling_rate,
+            fs = fs
         )
 
         # explicit sanity check for duration as soundfile does not complain here

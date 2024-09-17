@@ -6,6 +6,7 @@ import numpy as np
 
 from lhotse.audio.recording import Recording
 from lhotse.supervision import SupervisionSegment
+from lhotse.src.data_fs import LoadFileByFS
 
 
 @dataclass
@@ -19,6 +20,7 @@ class ActivityDetector(abc.ABC):
         self._detector_name = detector_name
         self._sampling_rate = sampling_rate
         self._device = device
+        self._fs = LoadFileByFS()
 
     @property
     def device(self) -> str:
@@ -26,7 +28,7 @@ class ActivityDetector(abc.ABC):
 
     def __call__(self, recording: Recording) -> List[SupervisionSegment]:
         resampled = recording.resample(self._sampling_rate)
-        audio = resampled.load_audio()  # type: ignore
+        audio = resampled.load_audio(fs=self._fs)  # type: ignore
 
         uid_template = "{recording_id}-{detector_name}-{channel}-{number:05}"
 
