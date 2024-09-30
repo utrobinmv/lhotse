@@ -50,8 +50,15 @@ class TarReadClass:
             if create_dir:
                 dirfile.close()
 
+    def fslink_ls(self):
+        return self._tarfs_ls()
+    
+    def exists(self, filename: str):
+        if filename not in self.dict_files.keys():
+            return False
+        return True
             
-    def tarfs_ls(self):
+    def _tarfs_ls(self):
         return list(self.dict_files.keys())
             
     def get_data_filename(self, filename: str):
