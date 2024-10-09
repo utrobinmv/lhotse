@@ -2,7 +2,7 @@ from functools import partial
 from typing import Any, Dict, Optional
 
 import numpy as np
-
+from lhotse.src.data_fs import LoadFileByFS
 from lhotse import Recording
 from lhotse.utils import fastcopy, ifnone
 
@@ -18,6 +18,7 @@ class CustomFieldMixin:
     """
 
     def __init__(self, custom: Optional[Dict[str, Any]]) -> None:
+        self.fs = LoadFileByFS()
         self.custom: Optional[Dict[str, Any]] = custom
 
     def __setattr__(self, key: str, value: Any) -> None:
