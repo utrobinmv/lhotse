@@ -8,6 +8,8 @@ from typing import List, Optional, Tuple, Union
 import numpy as np
 import torch
 
+from lhotse.src.fs_link_cache import fs_link
+
 from lhotse.audio.backend import read_audio
 from lhotse.audio.utils import (
     DurationMismatchError,
@@ -84,6 +86,12 @@ class AudioSource:
             It will tell ffmpeg to resample OPUS to this sampling rate.
         """
         source = self._prepare_for_reading(offset=offset, duration=duration)
+
+        if fs is None:
+            if source.find("@") > -1:
+                fs = fs_link
+
+            a = 1
 
         samples, sampling_rate = read_audio(
             source,

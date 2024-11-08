@@ -78,8 +78,14 @@ class SpeechSynthesisDataset(torch.utils.data.Dataset):
         }
 
         if self.return_text:
-            # use normalized text
-            text = [cut.supervisions[0].normalized_text for cut in cuts]
+            text = []
+            for cut in cuts:
+                if hasattr(cut.supervisions[0], 'normalized_text'):
+                    # use normalized text
+                    text.append(cut.supervisions[0].normalized_text)
+                else:
+                    text.append(cut.supervisions[0].text)
+            # text = [cut.supervisions[0].normalized_text for cut in cuts]
             batch["text"] = text
 
         if self.return_tokens:

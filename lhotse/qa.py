@@ -351,9 +351,10 @@ def validate_cut(c: Cut, read_data: bool = False) -> None:
     assert (
         c.duration > 0
     ), f"MonoCut {c.id}: duration must be greater than 0 (got {c.duration})"
-    assert (
-        c.sampling_rate > 0
-    ), f"MonoCut {c.id}: sampling_rate must be greater than 0 (got {c.sampling_rate})"
+    if hasattr(c, 'sampling_rate'):
+        assert (
+            c.sampling_rate > 0
+        ), f"MonoCut {c.id}: sampling_rate must be greater than 0 (got {c.sampling_rate})"
     assert (
         c.has_features or c.has_recording
     ), f"MonoCut {c.id}: must have either Features or Recording attached."

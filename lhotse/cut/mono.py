@@ -23,6 +23,9 @@ from lhotse.utils import (
     uuid4,
 )
 
+from lhotse.src import LoadFileByFS
+
+fs_link = LoadFileByFS()
 
 @dataclass
 class MonoCut(DataCut):
@@ -78,6 +81,7 @@ class MonoCut(DataCut):
                 channels=self.channel,
                 offset=self.start,
                 duration=self.duration,
+                fs=fs_link,
             )
         return None
 
