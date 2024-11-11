@@ -1,8 +1,6 @@
 from typing import LiteralString
 import lhotse
-from torch.utils.data import IterableDataset, DataLoader
-import itertools
-import numpy as np
+
 
 
 def get_it_values(it, custom_keys=[]) -> list[dict[str, str|float]]:
@@ -63,7 +61,7 @@ def get_it_values(it, custom_keys=[]) -> list[dict[str, str|float]]:
     return None
 
 
-def get_text_from_batch(batch_cuts, pause_token=' ', with_time = False) -> str:
+def get_text_from_batch(batch_cuts, pause_token=' ', text_column:str = 'text', with_time = False) -> str:
     """
     Вытягивает из списка информации текст и тайм метки
     """
@@ -77,10 +75,10 @@ def get_text_from_batch(batch_cuts, pause_token=' ', with_time = False) -> str:
         if 'type' in time_item.keys() and time_item['type'] == 'pause':
             list_text.append(pause_token)
         if 'type' in time_item.keys() and time_item['type'] == 'supervision':
-            if time_item['text']:
+            if time_item[text_column]:
                 if with_time:
                     list_text.append(f'<|{offset:.2f}|>')
-                list_text.append(time_item['text'])
+                list_text.append(time_item[text_column])
             end_text = offset + time_item['duration']
     if with_time:
         list_text.append(f'<|{end_text:.2f}|>')
