@@ -3,14 +3,15 @@ from torch.utils.data import IterableDataset
 
 
 class IterableDatasetWithLang(IterableDataset):
-    def __init__(self, ds: IterableDataset, lang: str):
+    def __init__(self, ds: IterableDataset, dict_columns: dict[str,str] = {}):
+        self.dict_columns = dict_columns
         self.ds = ds
-        self.lang = lang
         super().__init__()
     def __iter__(self):
         for item in self.ds:
             len_cut = len(item['cut'])
-            item['lang'] = [self.lang] * len_cut
+            for key in self.dict_columns.keys():
+                item[key] = [self.dict_columns[key]] * len_cut
             yield item
 
 
