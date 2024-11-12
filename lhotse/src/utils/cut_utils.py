@@ -30,7 +30,7 @@ def get_it_values(it, custom_keys=[]) -> list[dict[str, str|float]]:
                           'language': language,
                           'gender': gender}
                 for custom_key in custom_keys:
-                    if custom_key in supervision.custom.keys():
+                    if custom_key in supervision.custom.keys() and custom_key != 'text':
                         add_it[custom_key] = supervision.custom[custom_key]
                     else:
                         add_it[custom_key] = ''
@@ -61,11 +61,13 @@ def get_it_values(it, custom_keys=[]) -> list[dict[str, str|float]]:
     return None
 
 
-def get_text_from_batch(batch_cuts, pause_token=' ', text_column:str = 'text', with_time = False) -> str:
+def get_text_from_batch(batch_cuts, pause_token=' ', text_column:str = None, with_time = False) -> str:
     """
     Вытягивает из списка информации текст и тайм метки
     """
     list_timeline = get_it_values(batch_cuts, [text_column])
+    if text_column is None:
+        text_column = 'text'
     list_text = []
     end_text = 0
     offset = 0
