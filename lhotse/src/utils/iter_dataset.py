@@ -9,7 +9,8 @@ class IterableDatasetWithLang(IterableDataset):
         super().__init__()
     def __iter__(self):
         for item in self.ds:
-            item['lang'] = self.lang
+            len_cut = len(item['cut'])
+            item['lang'] = [self.lang] * len_cut
             yield item
 
 

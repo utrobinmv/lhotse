@@ -11,7 +11,7 @@ def get_it_values(it, custom_keys=[]) -> list[dict[str, str|float]]:
         #print('mix',it.cut)
         add_it = {'offset': it.offset,
                   'type': 'offset'}        
-        return [add_it] + get_it_values(it.cut)
+        return [add_it] + get_it_values(it.cut, custom_keys)
     elif isinstance(it, lhotse.cut.mono.MonoCut):
         if len(it.supervisions) > 0:
             list_timeline = []
@@ -48,7 +48,7 @@ def get_it_values(it, custom_keys=[]) -> list[dict[str, str|float]]:
         #print('MixedCut:',it)
         list_timeline = []
         for mix_track in it.tracks:
-            list_add_it = get_it_values(mix_track)
+            list_add_it = get_it_values(mix_track, custom_keys)
             
             list_timeline.extend(list_add_it)
             #print(calc_duration(list_add_it))
@@ -65,7 +65,7 @@ def get_text_from_batch(batch_cuts, pause_token=' ', text_column:str = 'text', w
     """
     Вытягивает из списка информации текст и тайм метки
     """
-    list_timeline = get_it_values(batch_cuts)
+    list_timeline = get_it_values(batch_cuts, [text_column])
     list_text = []
     end_text = 0
     offset = 0
