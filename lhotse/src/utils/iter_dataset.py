@@ -3,16 +3,23 @@ from torch.utils.data import IterableDataset
 
 
 class IterableDatasetWithLang(IterableDataset):
-    def __init__(self, ds: IterableDataset, dict_columns: dict[str,str] = {}):
+    def __init__(self, ds: IterableDataset, restart=False, dict_columns: dict[str,str] = {}, debug = False):
         self.dict_columns = dict_columns
         self.ds = ds
+        self.restart = restart
+        self.debug = debug
         super().__init__()
     def __iter__(self):
-        for item in self.ds:
-            len_cut = len(item['cut'])
-            for key in self.dict_columns.keys():
-                item[key] = [self.dict_columns[key]] * len_cut
-            yield item
+        while True:
+            for item in self.ds:
+                len_cut = len(item['cut'])
+                for key in self.dict_columns.keys():
+                    item[key] = [self.dict_columns[key]] * len_cut
+                yield item
+            if not self.restart:
+                break
+            elif self.debug:
+                print('restart dataset:', self.dict_columns)
 
 
 class IterableDatasetRandom(IterableDataset):
