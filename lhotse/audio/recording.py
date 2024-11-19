@@ -8,6 +8,8 @@ import numpy as np
 import torch
 from _decimal import ROUND_HALF_UP
 
+from lhotse.src.fs_link_cache import fs_link
+
 from lhotse.audio.backend import info, save_audio, torchaudio_info
 from lhotse.audio.source import AudioSource
 from lhotse.audio.utils import (
@@ -212,6 +214,8 @@ class Recording:
             else recording_id
         )
         if tar:
+            if fs is None:
+                fs = fs_link
             audio_info = info(
                 path_s,
                 force_opus_sampling_rate=force_opus_sampling_rate,

@@ -49,7 +49,7 @@ fs = LoadFileByFS()
 
 COMMONVOICE_LANGS = "en de fr cy tt kab ca zh-TW it fa eu es ru tr nl eo zh-CN rw pt zh-HK cs pl uk".split()
 COMMONVOICE_SPLITS = ("train", "dev", "test", "validated", "invalidated", "other")
-COMMONVOICE_DEFAULT_SPLITS = ("test", "dev", "train")
+#COMMONVOICE_DEFAULT_SPLITS = ("test", "dev", "train")
 
 
 def download_commonvoice(
@@ -142,7 +142,8 @@ def _read_cv_manifests_if_cached(
     if output_dir is None:
         return {}
     manifests = defaultdict(dict)
-    for part in ["train", "dev", "test"]:
+    for part in COMMONVOICE_SPLITS:
+        print('part:', part)
         for manifest in ["recordings", "supervisions"]:
             path = output_dir / f"cv_{manifest}_{language}_{part}.jsonl.gz"
             if not path.is_file():
@@ -243,7 +244,13 @@ def _prepare_part(fs,
             audio_infos = csv.DictReader(f, delimiter="\t", quoting=csv.QUOTE_NONE)
 
             for audio_info in tqdm(audio_infos, desc="Distributing tasks"):
-                futures.append(_parse_utterance(fs, lang_path, lang, audio_info))
+                try:
+                    audio_data = _parse_utterance(fs, lang_path, lang, audio_info)
+                except Exception as e:
+                    print(f"An unexpected error occurred: {e}")
+                    print('Возможно ошибка при разборе файла:', lang_path)
+                    continue
+                futures.append(audio_data)
                 # futures.append(
                 #     ex.submit(
                 #         _parse_utterance,
@@ -273,7 +280,7 @@ def prepare_commonvoice(
     output_dir: Pathlike,
     prefix: str, 
     languages: Union[str, Sequence[str]] = "auto",
-    splits: Union[str, Sequence[str]] = COMMONVOICE_DEFAULT_SPLITS,
+    splits: Union[str, Sequence[str]] = COMMONVOICE_SPLITS,
     num_jobs: int = 1,
 ) -> Dict[str, Dict[str, Dict[str, Union[RecordingSet, SupervisionSet]]]]:
     """

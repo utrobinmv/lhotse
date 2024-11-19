@@ -17,7 +17,8 @@ class IterableDatasetWithLang(IterableDataset):
 
 class IterableDatasetRandom(IterableDataset):
     def __init__(self, list_ds: list[IterableDataset]):
-        self.list_ds = [iter(ds) for ds in list_ds]
+        self.list_ds = [ds for ds in list_ds]
+        self.iter_ds = [iter(ds) for ds in self.list_ds]
         self.ds_num = len(list_ds)
         self.ds_prob = np.zeros(self.ds_num)
         self.weights = np.zeros(self.ds_num)
@@ -34,4 +35,9 @@ class IterableDatasetRandom(IterableDataset):
             self.ds_prob[chosen_index] += 1  # Увеличиваем счетчик для выбранного датасета
             
             # Возвращаем элементы из выбранного датасета
-            yield next(self.list_ds[chosen_index])
+            batch = next(self.iter_ds[chosen_index], 'end')
+            if batch == 'end': # Перезагрузим датасет
+                self.iter_ds[chosen_index] = iter(self.list_ds[chosen_index])
+                batch = next(self.iter_ds[chosen_index])
+
+            yield batch
