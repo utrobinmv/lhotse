@@ -64,25 +64,31 @@ def get_it_values(it, custom_keys=[]) -> list[dict[str, str|float]]:
 def get_text_from_batch(batch_cuts, pause_token=' ', text_column:str = None, with_time = False) -> str:
     """
     Вытягивает из списка информации текст и тайм метки
+    Выставление метод сделано на подобие модели whisper-large-v3-turbo
     """
     list_timeline = get_it_values(batch_cuts, [text_column])
     if text_column is None:
         text_column = 'text'
     list_text = []
+    list_pause = []
     end_text = 0
     offset = 0
     for time_item in list_timeline:
         if 'type' in time_item.keys() and time_item['type'] == 'offset':
             offset = time_item['offset']
         if 'type' in time_item.keys() and time_item['type'] == 'pause':
-            list_text.append(pause_token)
+            list_pause.append(pause_token)
         if 'type' in time_item.keys() and time_item['type'] == 'supervision':
             if time_item[text_column]:
                 if with_time:
                     list_text.append(f'<|{offset:.2f}|>')
+                list_text.extend(list_pause)
                 list_text.append(time_item[text_column])
+            else:
+                list_text.extend(list_pause)
+            list_pause = []
             end_text = offset + time_item['duration']
-    if with_time:
-        list_text.append(f'<|{end_text:.2f}|>')
+            if with_time:
+                list_text.append(f'<|{end_text:.2f}|>')
     text = ''.join(list_text)    
     return text
