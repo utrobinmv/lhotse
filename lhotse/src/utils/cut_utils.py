@@ -60,6 +60,8 @@ def get_it_values(it, custom_keys=[]) -> list[dict[str, str|float]]:
     print('not found obj:', it)
     return None
 
+def round_to_nearest(value, multiple):
+    return round(value / multiple) * multiple
 
 def get_text_from_batch(batch_cuts, pause_token=' ', text_column:str = None, with_time = False) -> str:
     """
@@ -81,6 +83,7 @@ def get_text_from_batch(batch_cuts, pause_token=' ', text_column:str = None, wit
         if 'type' in time_item.keys() and time_item['type'] == 'supervision':
             if time_item[text_column]:
                 if with_time:
+                    offset = round_to_nearest(offset, 0.02)
                     list_text.append(f'<|{offset:.2f}|>')
                 list_text.extend(list_pause)
                 list_text.append(time_item[text_column])
@@ -89,6 +92,7 @@ def get_text_from_batch(batch_cuts, pause_token=' ', text_column:str = None, wit
             list_pause = []
             end_text = offset + time_item['duration']
             if with_time:
+                end_text = round_to_nearest(end_text, 0.02)
                 list_text.append(f'<|{end_text:.2f}|>')
     text = ''.join(list_text)    
     return text

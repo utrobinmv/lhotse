@@ -2,7 +2,7 @@ import re
 
 class AsrTextPreprocess:
     def __init__(self):
-        self.punctuation = "!\"#$%&'()*+,-./:;“”‘’<=>?@[\]^_`{|}«»~—–。一，。"
+        self.punctuation = "!\"#$%&'()*+,-./:;“”‘’<=>?@[\]^_`{|}§〈〉•×→「」（）„“≡‧：；…？／！『』ー・《》«»~—–。一，。"
 
     def remove_punctuation(self, text):
         punctuation = self.punctuation
