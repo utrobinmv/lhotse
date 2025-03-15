@@ -76,15 +76,21 @@ def get_it_values(it, custom_keys=[], align_keys=[]) -> list[dict[str, str|float
 def round_to_nearest(value, multiple):
     return round(value / multiple) * multiple
 
-def get_text_from_batch(batch_cuts, pause_token=' ', text_column:str = None, with_time = False) -> str:
+def get_text_from_batch(batch_cuts, pause_token=' ', text_column:str = None, with_time = False,
+                        split_speaker = False, time_limit: int = None) -> str:
     """
     Вытягивает из списка информации текст и тайм метки
     Выставление метод сделано на подобие модели whisper-large-v3-turbo
     """
-    list_timeline = get_it_values(batch_cuts, [text_column])
+    align_keys=[]
+    if not time_limit is None:
+        align_keys.append('words')
+
+    list_timeline = get_it_values(batch_cuts, custom_keys=[text_column], align_keys=align_keys)
     if text_column is None:
         text_column = 'text'
     list_text = []
+    old_speaker = None
     list_pause = []
     end_text = 0
     offset = 0
@@ -94,6 +100,17 @@ def get_text_from_batch(batch_cuts, pause_token=' ', text_column:str = None, wit
         if 'type' in time_item.keys() and time_item['type'] == 'pause':
             list_pause.append(pause_token)
         if 'type' in time_item.keys() and time_item['type'] == 'supervision':
+
+            # time limit
+            if not time_limit is None:
+                if offset > time_limit:
+                    continue
+
+            if split_speaker:
+                if not old_speaker is None:
+                    if old_speaker != time_item['speaker']:
+                        list_text.append('\n - ')
+                old_speaker = time_item['speaker']
             if time_item[text_column]:
                 if with_time:
                     offset = round_to_nearest(offset, 0.02)
@@ -104,6 +121,33 @@ def get_text_from_batch(batch_cuts, pause_token=' ', text_column:str = None, wit
                 list_text.extend(list_pause)
             list_pause = []
             end_text = offset + time_item['duration']
+
+            # time limit
+            if not time_limit is None:
+                # TODO time_limit with phoneme and text_accent
+                if end_text > time_limit:
+                    # split text
+                    words = time_item['words']
+                    text_cut = list_text[-1]
+                    text_cut_find = text_cut.lower()
+
+                    #print('skip words:')
+                    text_modif = False
+                    for word in words[::-1]:
+                        if word.start + offset >  time_limit:
+                            text_modif = True
+                            index_rfind = text_cut_find.rfind(word.symbol)
+                            if index_rfind > -1:
+                                text_cut = text_cut[:index_rfind]
+                                text_cut_find = text_cut[:index_rfind]
+
+                                list_text[-1] = text_cut
+                                end_text = offset + word.start + word.duration
+                            #print(word.symbol)
+                    if text_modif:
+                        if end_text > time_limit:
+                            end_text = time_limit
+
             if with_time:
                 end_text = round_to_nearest(end_text, 0.02)
                 list_text.append(f'<|{end_text:.2f}|>')
