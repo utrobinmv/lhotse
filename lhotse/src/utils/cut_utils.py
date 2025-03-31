@@ -76,15 +76,21 @@ def get_it_values(it, custom_keys=[], align_keys=[]) -> list[dict[str, str|float
 def round_to_nearest(value, multiple):
     return round(value / multiple) * multiple
 
-def get_text_from_batch(batch_cuts, pause_token=' ', text_column:str = None, with_time = False,
-                        split_speaker = False, time_limit: int = None) -> str:
+def get_text_from_batch(batch_cuts, pause_token=' ', 
+                        text_column:str = None, 
+                        with_time = False,
+                        split_speaker = False, 
+                        time_limit: int = None, 
+                        words_column:str = 'words',
+                        cut_accent:bool = False,
+                        verbose:bool = False) -> str:
     """
     Вытягивает из списка информации текст и тайм метки
     Выставление метод сделано на подобие модели whisper-large-v3-turbo
     """
     align_keys=[]
     if not time_limit is None:
-        align_keys.append('words')
+        align_keys.append(words_column)
 
     list_timeline = get_it_values(batch_cuts, custom_keys=[text_column], align_keys=align_keys)
     if text_column is None:
@@ -124,24 +130,40 @@ def get_text_from_batch(batch_cuts, pause_token=' ', text_column:str = None, wit
 
             # time limit
             if not time_limit is None:
-                # TODO time_limit with phoneme and text_accent
                 if end_text > time_limit:
                     # split text
-                    words = time_item['words']
+                    words = time_item[words_column]
                     text_cut = list_text[-1]
                     text_cut_find = text_cut.lower()
-
+                    if cut_accent:
+                        text_cut_find = text_cut_find.replace('+','')
+                        text_cut_find = text_cut_find.replace('ё','е')
                     #print('skip words:')
                     text_modif = False
                     for word in words[::-1]:
                         if word.start + offset >  time_limit:
                             text_modif = True
                             index_rfind = text_cut_find.rfind(word.symbol)
+                            if verbose:
+                                #print(text_cut_find)
+                                print(word.symbol, index_rfind)
                             if index_rfind > -1:
-                                text_cut = text_cut[:index_rfind]
-                                text_cut_find = text_cut[:index_rfind]
+                                text_cut_find = text_cut_find[:index_rfind]
+                                if cut_accent:
+                                    # Возвращаем позицию в исходной строке (с учетом ударений)
+                                    original_index = 0
+                                    count = 0
+                                    for i, char in enumerate(text_cut):
+                                        if char != '+':
+                                            if count == index_rfind:
+                                                original_index = i
+                                                break
+                                            count += 1
+                                    index_rfind = original_index
 
-                                list_text[-1] = text_cut
+                                text_cut = text_cut[:index_rfind]
+
+                                list_text[-1] = text_cut.strip()
                                 end_text = offset + word.start + word.duration
                             #print(word.symbol)
                     if text_modif:
