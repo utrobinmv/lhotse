@@ -120,7 +120,7 @@ def get_default_audio_backend() -> "AudioBackend":
         # Use sph2pipe for .sph and shorten encoded audio
         Sph2pipeSubprocessBackend(),
         # Libsndfile seems to be the most stable backend in terms of covered formats and performance.
-        LibsndfileBackend(),
+        #LibsndfileBackend(),
         # New FFMPEG backend available only in torchaudio 2.0.x+
         TorchaudioFFMPEGBackend(),
         # Torchaudio should be able to deal with most audio types...
