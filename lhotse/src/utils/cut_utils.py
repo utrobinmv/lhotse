@@ -107,6 +107,7 @@ def get_text_from_batch(batch_cuts, pause_token=' ',
             list_pause.append(pause_token)
         if 'type' in time_item.keys() and time_item['type'] == 'supervision':
 
+
             # time limit
             if not time_limit is None:
                 if offset > time_limit:
@@ -116,16 +117,24 @@ def get_text_from_batch(batch_cuts, pause_token=' ',
                 if with_time:
                     offset = round_to_nearest(offset, 0.02)
                     list_text.append(f'<|{offset:.2f}|>')
+
                 list_text.extend(list_pause)
+
+                if split_speaker:
+                    if not old_speaker is None:
+                        if old_speaker != time_item['speaker']:
+                            list_text.append('\n - ')
+                    old_speaker = time_item['speaker']
+
                 list_text.append(time_item[text_column])
             else:
                 list_text.extend(list_pause)
 
-            if split_speaker:
-                if not old_speaker is None:
-                    if old_speaker != time_item['speaker']:
-                        list_text.append('\n - ')
-                old_speaker = time_item['speaker']
+                if split_speaker:
+                    if not old_speaker is None:
+                        if old_speaker != time_item['speaker']:
+                            list_text.append('\n - ')
+                    old_speaker = time_item['speaker']
 
             list_pause = []
             end_text = offset + time_item['duration']
