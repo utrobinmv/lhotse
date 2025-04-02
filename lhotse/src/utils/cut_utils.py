@@ -112,11 +112,6 @@ def get_text_from_batch(batch_cuts, pause_token=' ',
                 if offset > time_limit:
                     continue
 
-            if split_speaker:
-                if not old_speaker is None:
-                    if old_speaker != time_item['speaker']:
-                        list_text.append('\n - ')
-                old_speaker = time_item['speaker']
             if time_item[text_column]:
                 if with_time:
                     offset = round_to_nearest(offset, 0.02)
@@ -125,6 +120,13 @@ def get_text_from_batch(batch_cuts, pause_token=' ',
                 list_text.append(time_item[text_column])
             else:
                 list_text.extend(list_pause)
+
+            if split_speaker:
+                if not old_speaker is None:
+                    if old_speaker != time_item['speaker']:
+                        list_text.append('\n - ')
+                old_speaker = time_item['speaker']
+
             list_pause = []
             end_text = offset + time_item['duration']
 
@@ -163,7 +165,7 @@ def get_text_from_batch(batch_cuts, pause_token=' ',
 
                                 text_cut = text_cut[:index_rfind]
 
-                                list_text[-1] = text_cut.strip()
+                                list_text[-1] = text_cut #.strip()
                                 end_text = offset + word.start + word.duration
                             #print(word.symbol)
                     if text_modif:

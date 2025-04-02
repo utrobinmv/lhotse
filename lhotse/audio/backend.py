@@ -122,7 +122,7 @@ def get_default_audio_backend() -> "AudioBackend":
         # Libsndfile seems to be the most stable backend in terms of covered formats and performance.
         #LibsndfileBackend(),
         # New FFMPEG backend available only in torchaudio 2.0.x+
-        TorchaudioFFMPEGBackend(),
+        #TorchaudioFFMPEGBackend(),
         # Torchaudio should be able to deal with most audio types...
         TorchaudioDefaultBackend(),
         # ... if not, try audioread as a hail mary...
