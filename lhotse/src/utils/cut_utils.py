@@ -177,9 +177,9 @@ def get_text_from_batch(batch_cuts, pause_token=' ',
                                 list_text[-1] = text_cut #.strip()
                                 end_text = offset + word.start + word.duration
                             #print(word.symbol)
-                    if text_modif:
-                        if end_text > time_limit:
-                            end_text = time_limit
+                    #if text_modif:
+                    if end_text > time_limit:
+                        end_text = time_limit
 
             if with_time:
                 end_text = round_to_nearest(end_text, 0.02)
